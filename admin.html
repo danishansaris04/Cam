@@ -2,22 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DFlix Admin - Live Monitoring</title>
+    <title>DFlix Admin - Live</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         body { background: #111; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-        h1 { color: #e50914; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .card { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; animation: slideIn 0.3s ease; }
-        img { width: 100%; height: 140px; object-fit: cover; cursor: pointer; }
-        .footer { padding: 8px; font-size: 11px; text-align: center; color: #aaa; background: #2a2a2a; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e50914; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { background: #222; border-radius: 10px; overflow: hidden; border: 1px solid #333; transition: 0.3s; }
+        img { width: 100%; height: 160px; object-fit: cover; }
+        .time { padding: 10px; font-size: 12px; text-align: center; color: #999; }
+        button { background: #e50914; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>DFlix Live Admin Panel</h1>
+    <div class="header">
+        <h1>DFlix Control Center</h1>
+        <button onclick="clearLogs()">Clear All</button>
+    </div>
+
     <div id="gallery" class="grid"></div>
 
     <script>
@@ -28,24 +32,29 @@
             projectId: "distark",
             storageBucket: "distark.firebasestorage.app",
             messagingSenderId: "819241583845",
-            appId: "1:819241583845:web:2231e652310e47e06cc00c",
-            measurementId: "G-X175B7NX2K"
+            appId: "1:819241583845:web:2231e652310e47e06cc00c"
         };
         firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        const gallery = document.getElementById('gallery');
-
-        // Firebase Realtime Listener
-        firebase.database().ref('live_logs').on('child_added', (snap) => {
+        // Data Display
+        db.ref('live_logs').on('child_added', (snap) => {
             const data = snap.val();
             const html = `
                 <div class="card">
                     <img src="${data.url}" onclick="window.open(this.src)">
-                    <div class="footer">Captured: ${data.time}</div>
+                    <div class="time">Captured: ${data.time}</div>
                 </div>
             `;
-            gallery.insertAdjacentHTML('afterbegin', html);
+            document.getElementById('gallery').insertAdjacentHTML('afterbegin', html);
         });
+
+        function clearLogs() {
+            if(confirm("Sari images delete kar dein?")) {
+                db.ref('live_logs').remove();
+                location.reload();
+            }
+        }
     </script>
 </body>
 </html>
